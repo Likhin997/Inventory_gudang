@@ -1,0 +1,10 @@
+{
+  "name": "Remix ISP Inventory Management System",
+  "description": "Sistem Manajemen Inventory Terpadu khusus ISP untuk Modem/ONT dengan Serial Number \u0026 Batch, Tracking Kabel Meter per Team, Barang Umum, Stock Opname, Approval, dan Laporan Lengkap.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

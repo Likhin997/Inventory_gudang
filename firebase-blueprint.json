@@ -1,0 +1,106 @@
+{
+  "rules": [
+    {
+      "collection": "users",
+      "description": "User accounts with RBAC roles",
+      "read": "request.auth != null",
+      "write": "request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SUPERADMIN'"
+    },
+    {
+      "collection": "teams",
+      "description": "Technician teams",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "technicians",
+      "description": "Technician profiles",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "categories",
+      "description": "Item categories",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "units",
+      "description": "Item units",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "suppliers",
+      "description": "Suppliers",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "projects",
+      "description": "Projects",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "items",
+      "description": "Inventory items",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "item_batches",
+      "description": "Batches of items",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "modem_serials",
+      "description": "Serial numbers and their statuses",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "stock_transactions",
+      "description": "Stock movements (in, out, adjustment, transfer)",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "stock_opnames",
+      "description": "Stock checking reports",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "requisitions",
+      "description": "Technician material requests",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "notifications",
+      "description": "System notifications",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "audit_logs",
+      "description": "System audit logs",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "team_materials",
+      "description": "Materials assigned to teams",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "cable_usages",
+      "description": "Cable usage logs",
+      "read": "request.auth != null",
+      "write": "request.auth != null"
+    }
+  ]
+}

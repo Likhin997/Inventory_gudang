@@ -1,0 +1,46 @@
+services:
+  app:
+    container_name: gudang_jetcyber_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL:-postgresql://admin:11013009@db:5432/inventory_JCN}
+      - SQL_HOST=${SQL_HOST:-db}
+      - SQL_USER=${SQL_USER:-admin}
+      - SQL_PASSWORD=${SQL_PASSWORD:-11013009}
+      - SQL_DB_NAME=${SQL_DB_NAME:-inventory_JCN}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    container_name: gudang_jetcyber_db
+    image: postgres:15-alpine
+    restart: always
+    # Gunakan port 5433 di host agar tidak bentrok dengan PostgreSQL lokal yang sudah ada di port 5432
+    # Aplikasi web tetap terhubung secara internal via db:5432 tanpa masalah
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 11013009
+      POSTGRES_DB: inventory_JCN
+    volumes:
+      # Data database tersimpan secara permanen di host volume Docker
+      - gudang_jetcyber_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d inventory_JCN"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  gudang_jetcyber_pgdata:
+    name: gudang_jetcyber_pgdata
+
