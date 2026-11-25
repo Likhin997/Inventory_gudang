@@ -151,6 +151,7 @@ export async function runSelfHealMigrations() {
 async function startServer() {
   await runSelfHealMigrations();
   const app = express();
+  app.disable("x-powered-by");
   const portArgIndex = process.argv.indexOf("--port");
   const cliPort = portArgIndex !== -1 && process.argv[portArgIndex + 1] ? Number(process.argv[portArgIndex + 1]) : null;
   const isProd = process.env.NODE_ENV === "production";

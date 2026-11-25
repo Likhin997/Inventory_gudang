@@ -1,9 +1,8 @@
 import pg from 'pg';
 const { Pool } = pg;
-const pool = new Pool(process.env.DATABASE_URL ? {
-  connectionString: process.env.DATABASE_URL
-} : {
+const pool = new Pool({
   host: process.env.SQL_HOST || 'localhost',
+  port: process.env.SQL_PORT ? Number(process.env.SQL_PORT) : 5439,
   user: process.env.SQL_USER || 'admin',
   password: process.env.SQL_PASSWORD || '11013009',
   database: process.env.SQL_DB_NAME || 'inventory_JCN',

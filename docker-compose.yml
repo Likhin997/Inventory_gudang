@@ -5,16 +5,23 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    security_opt:
+      - no-new-privileges:true
+    # Bind strictly to 127.0.0.1 so Docker does NOT expose port 3009 to 0.0.0.0 (unscannable by Shodan & external port scanners).
+    # Expose to users via local reverse proxy (Nginx / Caddy / Cloudflare Tunnel) or SSH tunnel.
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3009:3009"
     environment:
       - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_URL=${DATABASE_URL:-postgresql://admin:11013009@db:5432/inventory_JCN}
+      - PORT=3009
       - SQL_HOST=${SQL_HOST:-db}
+      - SQL_PORT=${SQL_PORT:-5439}
       - SQL_USER=${SQL_USER:-admin}
       - SQL_PASSWORD=${SQL_PASSWORD:-11013009}
       - SQL_DB_NAME=${SQL_DB_NAME:-inventory_JCN}
+    networks:
+      - app_net
+      - backend_internal
     depends_on:
       db:
         condition: service_healthy
@@ -23,24 +30,33 @@ services:
     container_name: gudang_jetcyber_db
     image: postgres:15-alpine
     restart: always
-    # Gunakan port 5433 di host agar tidak bentrok dengan PostgreSQL lokal yang sudah ada di port 5432
-    # Aplikasi web tetap terhubung secara internal via db:5432 tanpa masalah
+    security_opt:
+      - no-new-privileges:true
+    # Run PostgreSQL on custom port 5439 and bind strictly to 127.0.0.1:5439 (invisible to Shodan & public scanners).
+    command: ["postgres", "-p", "5439", "-c", "listen_addresses=*"]
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5439:5439"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 11013009
-      POSTGRES_DB: inventory_JCN
+      POSTGRES_USER: ${SQL_USER:-admin}
+      POSTGRES_PASSWORD: ${SQL_PASSWORD:-11013009}
+      POSTGRES_DB: ${SQL_DB_NAME:-inventory_JCN}
+      PGPORT: 5439
+    networks:
+      - backend_internal
     volumes:
-      # Data database tersimpan secara permanen di host volume Docker
       - gudang_jetcyber_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d inventory_JCN"]
+      test: ["CMD-SHELL", "pg_isready -U ${SQL_USER:-admin} -d ${SQL_DB_NAME:-inventory_JCN} -p 5439"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+networks:
+  app_net:
+    driver: bridge
+  backend_internal:
+    driver: bridge
+
 volumes:
   gudang_jetcyber_pgdata:
     name: gudang_jetcyber_pgdata
-
