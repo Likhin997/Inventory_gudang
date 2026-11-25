@@ -6,6 +6,7 @@ import { LoginView } from './components/views/LoginView';
 import { InventoryService } from './services/storageService';
 import { Item, ModemSerialNumber } from './types/inventory';
 import { ErrorLogModal, FloatingDiagnosticButton } from './components/modals/ErrorLogModal';
+import { getPathFromTab, getTabFromPath, getTitleFromTab, normalizeTabId } from './utils/routes';
 
 // Lazy-loaded Views for minimal initial bundle & lightning-fast startup
 const DashboardView = lazy(() => import('./components/views/DashboardView').then(m => ({ default: m.DashboardView })));
@@ -53,56 +54,71 @@ export default function App() {
   const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const performLogout = useCallback((reasonMsg?: string) => {
+    sessionStorage.removeItem('auth_user');
+    sessionStorage.removeItem('last_activity');
     localStorage.removeItem('auth_user');
     localStorage.removeItem('last_activity');
     service.currentUser = { id: '', username: '', role: 'GUDANG', name: '', email: '', active: false, createdAt: new Date().toISOString() };
     setSessionExpiredMessage(reasonMsg || 'Sesi Anda telah berakhir karena tidak ada aktivitas selama 30 menit. Silakan masuk kembali.');
     setIsAuthenticated(false);
     setActiveTab('dashboard');
+    if (window.location.pathname !== '/login') {
+      window.history.replaceState({ tab: 'login' }, '', '/login');
+    }
+    document.title = 'Login - Jet Cyber Network';
   }, [service]);
 
   const handleExtendSession = useCallback(() => {
     const now = Date.now();
     lastActivityRef.current = now;
-    localStorage.setItem('last_activity', now.toString());
+    sessionStorage.setItem('last_activity', now.toString());
     setRemainingSessionSeconds(30 * 60);
   }, []);
 
-  // Session verification from localStorage with 30-minute inactivity check on mount
+  // Session verification from sessionStorage (requires fresh login on first visit / new browser session)
   useEffect(() => {
-    const storedUser = localStorage.getItem('auth_user');
-    const storedLastActivity = localStorage.getItem('last_activity');
+    // Clean up any legacy persistent localStorage auth keys so first visit always requires login
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('last_activity');
+
+    const storedUser = sessionStorage.getItem('auth_user');
+    const storedLastActivity = sessionStorage.getItem('last_activity');
     const now = Date.now();
 
-    if (storedUser) {
-      const lastActivityTime = storedLastActivity ? parseInt(storedLastActivity, 10) : 0;
+    if (storedUser && storedLastActivity) {
+      const lastActivityTime = parseInt(storedLastActivity, 10);
 
-      // Cek apakah sesi sudah kedaluwarsa (> 30 menit tanpa aktivitas)
-      if (lastActivityTime > 0 && now - lastActivityTime >= INACTIVITY_TIMEOUT_MS) {
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('last_activity');
-        setSessionExpiredMessage('Sesi Anda telah berakhir karena tidak ada aktivitas selama 30 menit. Silakan masuk kembali.');
+      // Cek apakah sesi sudah kedaluwarsa (> 30 menit tanpa aktivitas) atau timestamp tidak valid
+      if (!lastActivityTime || isNaN(lastActivityTime) || now - lastActivityTime >= INACTIVITY_TIMEOUT_MS) {
+        sessionStorage.removeItem('auth_user');
+        sessionStorage.removeItem('last_activity');
+        if (lastActivityTime > 0 && now - lastActivityTime >= INACTIVITY_TIMEOUT_MS) {
+          setSessionExpiredMessage('Sesi Anda telah berakhir karena tidak ada aktivitas selama 30 menit. Silakan masuk kembali.');
+        }
         setIsAuthenticated(false);
       } else {
         try {
           const user = JSON.parse(storedUser);
-          if (user && user.id) {
+          if (user && user.id && user.username && user.active !== false) {
             service.currentUser = user;
-            const validTime = lastActivityTime > 0 ? lastActivityTime : now;
-            lastActivityRef.current = validTime;
-            const remaining = Math.max(0, Math.ceil((INACTIVITY_TIMEOUT_MS - (now - validTime)) / 1000));
+            lastActivityRef.current = lastActivityTime;
+            const remaining = Math.max(0, Math.ceil((INACTIVITY_TIMEOUT_MS - (now - lastActivityTime)) / 1000));
             setRemainingSessionSeconds(remaining);
             setIsAuthenticated(true);
           } else {
-            localStorage.removeItem('auth_user');
+            sessionStorage.removeItem('auth_user');
+            sessionStorage.removeItem('last_activity');
             setIsAuthenticated(false);
           }
         } catch (e) {
-          localStorage.removeItem('auth_user');
+          sessionStorage.removeItem('auth_user');
+          sessionStorage.removeItem('last_activity');
           setIsAuthenticated(false);
         }
       }
     } else {
+      sessionStorage.removeItem('auth_user');
+      sessionStorage.removeItem('last_activity');
       setIsAuthenticated(false);
     }
   }, [service]);
@@ -113,7 +129,7 @@ export default function App() {
 
     const checkAndRecordActivity = (e?: Event) => {
       const now = Date.now();
-      const storedLast = localStorage.getItem('last_activity');
+      const storedLast = sessionStorage.getItem('last_activity');
       const lastTime = storedLast ? parseInt(storedLast, 10) : lastActivityRef.current;
       const elapsed = now - lastTime;
 
@@ -132,10 +148,10 @@ export default function App() {
         lastMousePosRef.current = { x: me.clientX, y: me.clientY };
       }
 
-      // 3. Catat aktivitas dan simpan ke localStorage setiap minimal 3 detik
+      // 3. Catat aktivitas dan simpan ke sessionStorage setiap minimal 3 detik
       if (now - lastActivityRef.current > 3000) {
         lastActivityRef.current = now;
-        localStorage.setItem('last_activity', now.toString());
+        sessionStorage.setItem('last_activity', now.toString());
       }
     };
 
@@ -152,7 +168,7 @@ export default function App() {
     const onVisibilityOrFocus = () => {
       if (!document.hidden) {
         const now = Date.now();
-        const storedLast = localStorage.getItem('last_activity');
+        const storedLast = sessionStorage.getItem('last_activity');
         const lastTime = storedLast ? parseInt(storedLast, 10) : lastActivityRef.current;
         const elapsed = now - lastTime;
 
@@ -191,19 +207,39 @@ export default function App() {
   }, [isAuthenticated, performLogout]);
 
   const handleLogout = useCallback(() => {
+    sessionStorage.removeItem('auth_user');
+    sessionStorage.removeItem('last_activity');
     localStorage.removeItem('auth_user');
     localStorage.removeItem('last_activity');
+    service.currentUser = { id: '', username: '', role: 'GUDANG', name: '', email: '', active: false, createdAt: new Date().toISOString() };
     setSessionExpiredMessage(null);
     setIsAuthenticated(false);
     setActiveTab('dashboard');
-  }, []);
-
-  useEffect(() => {
-    service.syncFromApi().finally(() => setIsInitializing(false));
+    if (window.location.pathname !== '/login') {
+      window.history.replaceState({ tab: 'login' }, '', '/login');
+    }
+    document.title = 'Login - Jet Cyber Network';
   }, [service]);
 
-  // Active Tab navigation state
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  useEffect(() => {
+    service.syncFromApi().then(() => {
+      // Verify restored session user still exists and is active in the database
+      if (service.currentUser?.id && service.users.length > 0) {
+        const dbUser = service.users.find(
+          (u) => u.id === service.currentUser.id || u.username === service.currentUser.username
+        );
+        if (!dbUser || dbUser.active === false) {
+          sessionStorage.removeItem('auth_user');
+          sessionStorage.removeItem('last_activity');
+          service.currentUser = { id: '', username: '', role: 'GUDANG', name: '', email: '', active: false, createdAt: new Date().toISOString() };
+          setIsAuthenticated(false);
+        }
+      }
+    }).finally(() => setIsInitializing(false));
+  }, [service]);
+
+  // Active Tab navigation state synced with browser URL & history
+  const [activeTab, setActiveTab] = useState<string>(() => getTabFromPath(window.location.pathname));
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Global modals
@@ -228,26 +264,68 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Sync URL and document title on auth state change & handle browser Back/Forward (popstate)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      if (window.location.pathname === '/' || window.location.pathname === '/login') {
+        window.history.replaceState({ tab: 'login' }, '', '/login');
+      }
+      document.title = 'Login - Jet Cyber Network';
+      return;
+    }
+
+    const currentTab = getTabFromPath(window.location.pathname);
+    const targetPath = getPathFromTab(currentTab);
+    setActiveTab(currentTab);
+    document.title = getTitleFromTab(currentTab);
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState({ tab: currentTab }, '', targetPath);
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      const nextTab = event.state?.tab
+        ? normalizeTabId(event.state.tab)
+        : getTabFromPath(window.location.pathname);
+      setActiveTab(nextTab);
+      setSidebarOpen(false);
+      setShowScanner(false);
+      setShowSearch(false);
+      document.title = getTitleFromTab(nextTab);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isAuthenticated]);
+
   const handleNavigate = (tabId: string, itemPayload?: Item | null, snPayload?: ModemSerialNumber | null) => {
     if (tabId === 'system-logs') {
       setErrorModalDefaultTab('logs');
       setShowErrorLogs(true);
       return;
     }
+    const normalizedTab = normalizeTabId(tabId);
+    const targetPath = getPathFromTab(normalizedTab);
+
     if (itemPayload !== undefined) {
       setPreselectedItem(itemPayload);
     }
     if (snPayload !== undefined) {
       setPreselectedSN(snPayload);
     }
-    setActiveTab(tabId);
+
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ tab: normalizedTab }, '', targetPath);
+    }
+    document.title = getTitleFromTab(normalizedTab);
+    setActiveTab(normalizedTab);
     setSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleScannedSN = (sn: ModemSerialNumber) => {
     setPreselectedSN(sn);
-    setActiveTab('modems');
+    handleNavigate('modems');
   };
 
   if (isInitializing) {
@@ -263,14 +341,18 @@ export default function App() {
       <LoginView
         sessionExpiredMessage={sessionExpiredMessage}
         onLogin={(user) => {
-          localStorage.setItem('auth_user', JSON.stringify(user));
+          sessionStorage.setItem('auth_user', JSON.stringify(user));
           localStorage.removeItem('explicit_logout');
           const now = Date.now();
-          localStorage.setItem('last_activity', now.toString());
+          sessionStorage.setItem('last_activity', now.toString());
           lastActivityRef.current = now;
           setSessionExpiredMessage(null);
+          const initialTab = getTabFromPath(window.location.pathname);
+          const initialPath = getPathFromTab(initialTab);
+          window.history.pushState({ tab: initialTab }, '', initialPath);
+          document.title = getTitleFromTab(initialTab);
+          setActiveTab(initialTab);
           setIsAuthenticated(true);
-          setActiveTab('dashboard'); // Eksplisit navigasi ke dashboard
         }}
       />
     );

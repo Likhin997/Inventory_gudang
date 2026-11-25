@@ -29,6 +29,7 @@ import {
 import { InventoryService } from '../services/storageService';
 import { logger } from '../utils/logger';
 import { JetCyberLogo } from './JetCyberLogo';
+import { getPathFromTab } from '../utils/routes';
 
 interface SidebarProps {
   activeTab: string;
@@ -330,19 +331,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     (item.id === 'opname' && activeTab === 'stock-opname') ||
                     (item.id === 'admin-users' && activeTab === 'administration');
 
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onSelectTab(item.id);
-                        if (handleClose) handleClose();
-                      }}
-                      className={`w-full flex items-center justify-between px-3.5 py-2 rounded text-xs transition-colors ${
-                        isActive
-                          ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                          : 'text-slate-300 hover:bg-slate-800 hover:text-white font-medium'
-                      }`}
-                    >
+                  const itemContent = (
+                    <>
                       <div className="flex items-center gap-2.5">
                         <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                         <span>{item.label}</span>
@@ -357,7 +347,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           {item.badge}
                         </span>
                       )}
-                    </button>
+                    </>
+                  );
+
+                  const itemClass = `w-full flex items-center justify-between px-3.5 py-2 rounded text-xs transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white font-medium'
+                  }`;
+
+                  if (item.id === 'system-logs') {
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          onSelectTab(item.id);
+                          if (handleClose) handleClose();
+                        }}
+                        className={itemClass}
+                      >
+                        {itemContent}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <a
+                      key={item.id}
+                      href={getPathFromTab(item.id)}
+                      onClick={(e) => {
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                        e.preventDefault();
+                        onSelectTab(item.id);
+                        if (handleClose) handleClose();
+                      }}
+                      className={itemClass}
+                    >
+                      {itemContent}
+                    </a>
                   );
                 })}
               </div>

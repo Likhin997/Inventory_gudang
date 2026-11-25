@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   Menu,
   Clock,
-  Terminal
+  Terminal,
+  ArrowLeft
 } from 'lucide-react';
 import { InventoryService } from '../services/storageService';
 import { logger } from '../utils/logger';
@@ -147,6 +148,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         <div className="flex items-center space-x-3">
+          {activeTab !== 'dashboard' && (
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors cursor-pointer"
+              title="Kembali ke halaman sebelumnya"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Kembali</span>
+            </button>
+          )}
           <div className="flex items-center space-x-3">
             <button
               onClick={() => onNavigateTab('dashboard')}

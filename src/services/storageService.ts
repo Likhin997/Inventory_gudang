@@ -47,7 +47,7 @@ export class InventoryService {
   private lastDataFingerprint: string = '';
 
   public settings: SystemSettings = INITIAL_SETTINGS;
-  public currentUser: User = { id: 'dummy', name: 'Loading', role: 'SUPERADMIN', email: '', active: true, username: 'admin', createdAt: new Date().toISOString() };
+  public currentUser: User = { id: '', name: '', role: 'GUDANG', email: '', active: false, username: '', createdAt: new Date().toISOString() };
   public users: User[] = [];
   public teams: Team[] = [];
   public teamMaterials: TeamMaterial[] = [];
@@ -75,10 +75,10 @@ export class InventoryService {
       const storedSettings = localStorage.getItem('isp_inventory_settings_v2');
       if (storedSettings) this.settings = JSON.parse(storedSettings);
       
-      const storedUser = localStorage.getItem('auth_user');
+      const storedUser = sessionStorage.getItem('auth_user');
       if (storedUser) this.currentUser = JSON.parse(storedUser);
     } catch (e) {
-      console.warn('Error reading localStorage settings', e);
+      console.warn('Error reading storage settings', e);
     }
 
     // Smart background polling: every 5s, paused when tab is inactive
