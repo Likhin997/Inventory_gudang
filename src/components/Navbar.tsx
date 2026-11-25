@@ -134,78 +134,78 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-8 shadow-xs">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-2 sm:gap-3 border-b border-slate-200 bg-white px-3 sm:px-6 shadow-xs">
       {/* Left: Mobile Toggle & Breadcrumb Navigation */}
-      <div className="flex items-center space-x-3 sm:space-x-4">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {onOpenSidebar && (
           <button
             onClick={onOpenSidebar}
-            className="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 lg:hidden"
+            className="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 lg:hidden shrink-0"
             title="Buka Menu"
           >
             <Menu className="h-5 w-5" />
           </button>
         )}
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           {activeTab !== 'dashboard' && (
             <button
               type="button"
               onClick={() => window.history.back()}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               title="Kembali ke halaman sebelumnya"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
               <span className="hidden sm:inline">Kembali</span>
             </button>
           )}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={() => onNavigateTab('dashboard')}
-              className="flex items-center hover:opacity-90 transition-opacity cursor-pointer border-0 bg-transparent p-0"
+              className="flex lg:hidden items-center hover:opacity-90 transition-opacity cursor-pointer border-0 bg-transparent p-0 shrink-0"
               title="Jet Cyber Network"
             >
               <img
                 src="/jetcyber-logo.svg"
                 alt="Jet Cyber Network - Reach Without Limits"
-                className="h-10 sm:h-11 w-auto object-contain select-none"
+                className="h-9 w-auto object-contain select-none"
               />
             </button>
-            <div className="h-4 w-[1px] bg-slate-200 hidden sm:block"></div>
-            <span className="text-slate-700 font-semibold text-xs sm:text-sm hidden sm:inline-block">
+            <div className="h-4 w-[1px] bg-slate-200 hidden sm:block lg:hidden shrink-0"></div>
+            <span className="text-slate-800 font-semibold text-xs sm:text-sm hidden sm:inline-block truncate max-w-[180px] xl:max-w-[260px]">
               {breadcrumb.page}
             </span>
           </div>
 
-          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-700 font-medium">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-700 font-medium whitespace-nowrap shrink-0">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span>NOC Live</span>
           </div>
         </div>
       </div>
 
       {/* Center: Search Bar Trigger */}
-      <div className="flex-1 max-w-sm mx-4 hidden md:block">
+      <div className="flex-1 max-w-xs mx-2 hidden md:block min-w-[160px]">
         <button
           onClick={onOpenSearch}
-          className="w-full flex items-center justify-between px-3 py-1.5 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-500 hover:border-slate-300 hover:bg-slate-100 transition-colors shadow-2xs"
+          className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-500 hover:border-slate-300 hover:bg-slate-100 transition-colors shadow-2xs"
         >
-          <div className="flex items-center gap-2">
-            <Search className="h-3.5 w-3.5 text-slate-400" />
-            <span>Cari SN Modem, Kabel, Item...</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <span className="truncate whitespace-nowrap">Cari SN Modem, Kabel, Item...</span>
           </div>
-          <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white text-slate-500 rounded border border-slate-200">
+          <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white text-slate-500 rounded border border-slate-200 shrink-0 whitespace-nowrap">
             Ctrl+K
           </kbd>
         </button>
       </div>
 
       {/* Right: Actions, Notifications & User */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className="flex items-center gap-2 shrink-0">
         {/* Mobile Search Button */}
         <button
           onClick={onOpenSearch}
-          className="md:hidden p-2 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200"
+          className="md:hidden p-2 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0"
           title="Cari"
         >
           <Search className="h-4 w-4" />
@@ -214,11 +214,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* QR / Barcode Scanner */}
         <button
           onClick={onOpenScanner}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium border border-slate-200 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium border border-slate-200 transition-colors whitespace-nowrap shrink-0"
           title="Scan Barcode / QR Modem"
         >
-          <QrCode className="h-3.5 w-3.5 text-blue-600" />
-          <span className="hidden sm:inline">Scan SN</span>
+          <QrCode className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+          <span className="hidden xl:inline">Scan SN</span>
         </button>
 
         {/* Inactivity Session Status Pill */}
@@ -226,14 +226,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onExtendSession}
             title={`Sisa waktu sesi aktif tanpa aktivitas: ${formatRemaining(remainingSessionSeconds)}. Klik untuk mereset ke 30 menit.`}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               remainingSessionSeconds <= 120
                 ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse font-bold'
                 : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
             }`}
           >
-            <Clock className={`h-3.5 w-3.5 ${remainingSessionSeconds <= 120 ? 'text-amber-600' : 'text-slate-500'}`} />
-            <span className="hidden sm:inline text-[11px]">Sesi:</span>
+            <Clock className={`h-3.5 w-3.5 shrink-0 ${remainingSessionSeconds <= 120 ? 'text-amber-600' : 'text-slate-500'}`} />
+            <span className="hidden xl:inline text-[11px]">Sesi:</span>
             <span className="font-mono text-[11px] font-semibold">{formatRemaining(remainingSessionSeconds)}</span>
           </button>
         )}
@@ -242,10 +242,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         {onOpenStockIn && (currentUser.role === 'ADMIN' || currentUser.role === 'SUPERADMIN') && (
           <button
             onClick={onOpenStockIn}
-            className="flex items-center gap-1.5 bg-blue-600 text-white px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors"
+            className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-blue-700 shadow-sm transition-colors whitespace-nowrap shrink-0"
           >
-            <PlusCircle className="h-3.5 w-3.5" />
-            <span>+ Barang Masuk</span>
+            <PlusCircle className="h-3.5 w-3.5 shrink-0" />
+            <span>Barang Masuk</span>
           </button>
         )}
 
@@ -254,14 +254,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onOpenErrorModal}
             title="Buka Log Error & Diagnostik Sistem"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               errorCount > 0
                 ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
             }`}
           >
-            <Terminal className={`h-4 w-4 ${errorCount > 0 ? 'text-red-600' : 'text-slate-600'}`} />
-            <span className="hidden sm:inline">Log Error</span>
+            <Terminal className={`h-4 w-4 shrink-0 ${errorCount > 0 ? 'text-red-600' : 'text-slate-600'}`} />
+            <span className="hidden xl:inline">Log Error</span>
             {errorCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[10px] font-bold">
                 {errorCount}
@@ -353,20 +353,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* User Profile Switcher */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => {
               setShowUserMenu(!showUserMenu);
               setShowNotifMenu(false);
             }}
-            className="flex items-center space-x-2 p-1 sm:px-2.5 sm:py-1 rounded-md bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors"
+            className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-md bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors whitespace-nowrap shrink-0"
           >
-            <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+            <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
               {currentUser.name.slice(0, 2).toUpperCase()}
             </div>
-            <div className="text-left hidden lg:block">
-              <div className="text-xs font-semibold text-slate-800 leading-tight">{currentUser.name}</div>
-              <div className="text-[10px] text-slate-500 font-medium">{roleLabels[currentUser.role]}</div>
+            <div className="text-left hidden lg:block min-w-0">
+              <div className="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[125px]">{currentUser.name}</div>
+              <div className="text-[10px] text-slate-500 font-medium whitespace-nowrap">{roleLabels[currentUser.role]}</div>
             </div>
           </button>
 

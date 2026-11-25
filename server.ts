@@ -149,7 +149,10 @@ export async function runSelfHealMigrations() {
 }
 
 async function startServer() {
-  await runSelfHealMigrations();
+  const isCloudSqlSocket = (process.env.SQL_HOST || '').includes('cloudsql');
+  if (!isCloudSqlSocket) {
+    await runSelfHealMigrations();
+  }
   const app = express();
   app.disable("x-powered-by");
   const portArgIndex = process.argv.indexOf("--port");
@@ -209,6 +212,10 @@ async function startServer() {
   });
 
   app.listen(PORT, "0.0.0.0", async () => {
+    if ((process.env.SQL_HOST || '').includes('cloudsql')) {
+      console.log(`[${getLogTime()}] 🚀 Server running on http://0.0.0.0:${PORT}`);
+      return;
+    }
     try {
       const { createPool } = await import("./src/db/index.js");
       const pool = createPool();

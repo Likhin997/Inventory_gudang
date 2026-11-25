@@ -15,40 +15,53 @@ async function queryTableSafe<T>(queryFn: () => Promise<T>, fallback: T, tableNa
   try {
     return await queryFn();
   } catch (err: any) {
+    const code = err?.code || err?.cause?.code;
+    const msg = String(err?.message || err?.cause?.message || '');
+
+    // If database socket/connection is temporarily unavailable (e.g. cold start), surface 503 cleanly
+    if (
+      code === 'ENOENT' ||
+      code === 'ECONNREFUSED' ||
+      code === '57P03' ||
+      msg.includes('ENOENT') ||
+      msg.includes('ECONNREFUSED')
+    ) {
+      throw Object.assign(new Error('Database connection temporarily unavailable'), { statusCode: 503, cause: err });
+    }
+
     // If column missing (PostgreSQL error 42703) or table missing (42P01), attempt self-heal migration
-    if (err?.code === '42703' || err?.code === '42P01') {
+    if (code === '42703' || code === '42P01') {
       try {
         await runSelfHealMigrations();
         return await queryFn();
       } catch (retryErr: any) {
         console.warn(`Auto-heal retry failed for table ${tableName}:`, retryErr?.message || retryErr);
       }
-    }
 
-    // Resilience fallback: If Drizzle query failed due to a missing column not yet migrated in database,
-    // query all existing columns with raw SELECT * so the user gets all their data without breaking
-    if (tableName) {
-      try {
-        const { createPool } = await import("../db/index.js");
-        const pool = createPool();
-        const res = await pool.query(`SELECT * FROM "${tableName}"`);
-        if (res && res.rows) {
-          const rows = res.rows.map((row: any) => {
-            const mapped: any = { ...row };
-            for (const key of Object.keys(row)) {
-              if (key.includes('_')) {
-                const camelKey = key.replace(/_([a-z0-9])/g, (_, g) => g.toUpperCase());
-                if (mapped[camelKey] === undefined) {
-                  mapped[camelKey] = row[key];
+      // Resilience fallback only for missing-column schema mismatch
+      if (tableName) {
+        try {
+          const { createPool } = await import("../db/index.js");
+          const pool = createPool();
+          const res = await pool.query(`SELECT * FROM "${tableName}"`);
+          if (res && res.rows) {
+            const rows = res.rows.map((row: any) => {
+              const mapped: any = { ...row };
+              for (const key of Object.keys(row)) {
+                if (key.includes('_')) {
+                  const camelKey = key.replace(/_([a-z0-9])/g, (_, g) => g.toUpperCase());
+                  if (mapped[camelKey] === undefined) {
+                    mapped[camelKey] = row[key];
+                  }
                 }
               }
-            }
-            return mapped;
-          });
-          return rows as unknown as T;
+              return mapped;
+            });
+            return rows as unknown as T;
+          }
+        } catch (rawErr: any) {
+          console.warn(`Raw fallback for table ${tableName} failed:`, rawErr?.message || rawErr);
         }
-      } catch (rawErr: any) {
-        console.warn(`Raw fallback for table ${tableName} failed:`, rawErr?.message || rawErr);
       }
     }
 
@@ -89,8 +102,9 @@ router.get("/", async (req, res) => {
     res.json(data);
   } catch (err: any) {
     const elapsed = Date.now() - reqStart;
-    console.error(`[${getTimestampWIB()}] [SYNC:GET] ❌ Fatal Error (${elapsed}ms):`, err?.message || err);
-    res.status(500).json({ error: err.message });
+    const status = err?.statusCode || 500;
+    console.warn(`[${getTimestampWIB()}] [SYNC:GET] ⚠️ ${status} (${elapsed}ms):`, err?.message || err);
+    res.status(status).json({ error: err?.message || 'Failed to sync database' });
   }
 });
 
