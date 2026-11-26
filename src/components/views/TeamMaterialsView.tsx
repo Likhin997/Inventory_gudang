@@ -938,7 +938,25 @@ export const TeamMaterialsView: React.FC = () => {
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
                       <Boxes className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-                      Tidak ada data stok material tim yang cocok dengan filter pencarian.
+                      <p>Tidak ada data stok material tim yang cocok dengan filter pencarian.</p>
+                      {(service.teamMaterials || []).length === 0 && teamTransactions.length > 0 && (
+                        <div className="mt-4 flex flex-col items-center gap-2">
+                          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg max-w-lg">
+                            Ditemukan <strong>{teamTransactions.length}</strong> log mutasi material tim, namun tabel stok material tim kosong (biasanya akibat restore dari file backup versi lama).
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const count = service.rebuildTeamMaterialsFromHistory(true);
+                              showNotification(`Berhasil memulihkan ${count} data stok material tim dari riwayat transaksi!`);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            <span>Pulihkan Stok Material Tim dari Riwayat Transaksi</span>
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}

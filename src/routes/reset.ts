@@ -15,6 +15,7 @@ router.post("/", async (req, res) => {
       await tx.delete(schema.opnames);
       await tx.delete(schema.batches);
       await tx.delete(schema.modemSns);
+      await tx.delete(schema.teamMaterials);
       
       // We don't delete items, but we set their currentStock to 0
       const items = await tx.select().from(schema.items);

@@ -2119,10 +2119,11 @@ export class InventoryService {
   // --- BACKUP & RESTORE ---
   public exportDatabaseJSON(): string {
     const dump = {
-      version: '1.0',
+      version: '1.1',
       exportedAt: new Date().toISOString(),
       settings: this.settings,
       users: this.users,
+      teams: this.teams,
       technicians: this.technicians,
       categories: this.categories,
       units: this.units,
@@ -2136,7 +2137,8 @@ export class InventoryService {
       requisitions: this.requisitions,
       opnames: this.opnames,
       notifications: this.notifications,
-      auditLogs: this.auditLogs
+      auditLogs: this.auditLogs,
+      teamMaterials: this.teamMaterials
     };
     return JSON.stringify(dump, null, 2);
   }
@@ -2148,6 +2150,7 @@ export class InventoryService {
     this.opnames = [];
     this.batches = [];
     this.modemSNs = [];
+    this.teamMaterials = [];
     this.notifications = [];
     this.items = this.items.map(item => ({ ...item, currentStock: 0 }));
     
@@ -2161,6 +2164,110 @@ export class InventoryService {
     }
   }
 
+  public rebuildTeamMaterialsFromHistory(persist = true): number {
+    const trackableCats = new Set(['BARANG_UMUM', 'BARANG_TEKNISI', 'AKSESORIS', 'PASIF', 'QUANTITY']);
+    const sortedTrxs = [...(this.transactions || [])].sort((a, b) => {
+      const ta = new Date(a.date || 0).getTime() || 0;
+      const tb = new Date(b.date || 0).getTime() || 0;
+      return ta - tb;
+    });
+
+    const reconstructed: TeamMaterial[] = [];
+
+    const matchesEntity = (mat: TeamMaterial, techId?: string, teamId?: string, techName?: string, teamName?: string) => {
+      if (techId && (mat.techId === techId || mat.teamId === techId)) return true;
+      if (teamId && (mat.teamId === teamId || mat.techId === teamId)) return true;
+      const n1 = (techName || '').trim().toLowerCase();
+      const n2 = (teamName || '').trim().toLowerCase();
+      const m1 = (mat.techName || '').trim().toLowerCase();
+      const m2 = (mat.teamName || '').trim().toLowerCase();
+      if (n1 && (m1 === n1 || m2 === n1)) return true;
+      if (n2 && (m1 === n2 || m2 === n2)) return true;
+      return false;
+    };
+
+    for (const trx of sortedTrxs) {
+      const item = this.items.find(i => i.id === trx.itemId);
+      const cat = trx.categoryType || item?.categoryType || '';
+      const isDepletionLog = (trx.transactionNumber || '').startsWith('TRX-USE-');
+
+      if (trx.type === 'STOCK_OUT' && !isDepletionLog) {
+        if (!trackableCats.has(cat)) continue;
+        const hasTarget = !!(trx.techId || trx.teamId || trx.techName || trx.teamName);
+        if (!hasTarget) continue;
+
+        const targetId = trx.techId || trx.teamId || 'unknown-team';
+        const teamObj = this.teams.find(t => t.id === trx.teamId || t.id === targetId);
+        const techObj = this.technicians.find(t => t.id === trx.techId || t.id === targetId);
+        const resolvedTeamId = trx.teamId || (targetId.startsWith('team-') ? targetId : (techObj?.teamId || 'unknown-team'));
+        const resolvedTeamName = trx.teamName || teamObj?.name || (targetId.startsWith('team-') ? (trx.techName || targetId) : 'Unknown Team');
+        const resolvedTechName = trx.techName || techObj?.name || resolvedTeamName;
+
+        reconstructed.push({
+          id: `tmat-${trx.id}`,
+          itemId: trx.itemId,
+          itemName: trx.itemName || item?.name || 'Material',
+          teamId: resolvedTeamId,
+          teamName: resolvedTeamName,
+          techId: targetId,
+          techName: resolvedTechName,
+          quantity: Number(trx.quantity) || 0,
+          unit: trx.unit || item?.unit || 'pcs',
+          status: 'SISA',
+          dateIssued: (trx.date || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+          notes: trx.notes || ''
+        });
+      } else if (trx.type === 'STOCK_OUT' && isDepletionLog) {
+        // Depletion marker created when user clicked "Tandai Habis"
+        const candidate =
+          reconstructed.find(
+            m => m.status === 'SISA' && m.itemId === trx.itemId && m.quantity === Number(trx.quantity) &&
+              matchesEntity(m, trx.techId, trx.teamId, trx.techName, trx.teamName)
+          ) ||
+          reconstructed.find(
+            m => m.status === 'SISA' && m.itemId === trx.itemId &&
+              matchesEntity(m, trx.techId, trx.teamId, trx.techName, trx.teamName)
+          );
+        if (candidate) {
+          candidate.status = 'HABIS';
+          candidate.dateDepleted = (trx.date || '').slice(0, 10);
+          if (trx.notes) {
+            candidate.notes = candidate.notes ? `${candidate.notes} | ${trx.notes}` : trx.notes;
+          }
+        }
+      } else if (trx.type === 'RETURN') {
+        let remainingReturn = Number(trx.quantity) || 0;
+        for (const mat of reconstructed) {
+          if (remainingReturn <= 0) break;
+          if (mat.status !== 'SISA' || mat.itemId !== trx.itemId) continue;
+          if (!matchesEntity(mat, trx.techId, trx.teamId, trx.techName, trx.teamName)) continue;
+
+          if (mat.quantity <= remainingReturn) {
+            remainingReturn -= mat.quantity;
+            mat.quantity = 0;
+            mat.status = 'HABIS';
+            mat.dateDepleted = (trx.date || '').slice(0, 10);
+          } else {
+            mat.quantity = Number((mat.quantity - remainingReturn).toFixed(2));
+            remainingReturn = 0;
+          }
+        }
+      }
+    }
+
+    this.teamMaterials = reconstructed.reverse();
+    if (persist) {
+      this.logAudit(
+        'TEAM_MATERIAL_REBUILD',
+        'MATERIAL',
+        'all',
+        `Rekonstruksi ${this.teamMaterials.length} data stok material tim dari riwayat transaksi.`
+      );
+      this.persistAll();
+    }
+    return this.teamMaterials.length;
+  }
+
   public importDatabaseJSON(jsonString: string): void {
     try {
       const data = JSON.parse(jsonString);
@@ -2169,6 +2276,7 @@ export class InventoryService {
       }
       if (data.settings) this.settings = data.settings;
       if (data.users) this.users = data.users;
+      if (data.teams) this.teams = data.teams;
       if (data.technicians) this.technicians = data.technicians;
       if (data.categories) this.categories = data.categories;
       if (data.units) this.units = data.units;
@@ -2183,6 +2291,11 @@ export class InventoryService {
       if (data.opnames) this.opnames = data.opnames;
       if (data.notifications) this.notifications = data.notifications;
       if (data.auditLogs) this.auditLogs = data.auditLogs;
+      if (Array.isArray(data.teamMaterials) && data.teamMaterials.length > 0) {
+        this.teamMaterials = data.teamMaterials;
+      } else {
+        this.rebuildTeamMaterialsFromHistory(false);
+      }
 
       this.recalculateBatchCounters();
       this.persistAll();
